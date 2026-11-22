@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoTube - جوتيوب بدون إعلانات وبحث يوتيوب المباشر</title>
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- 1. Firebase SDKs (App, Database, Auth) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
+    <!-- 2. GoTube Database & Firebase File (data.js) -->
+    <script src="data.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --surface-color: #1a1a1a;
+            --surface-hover: #262626;
+            --primary-red: #ff0033;
+            --accent-blue: #3ea6ff;
+            --text-main: #f1f1f1;
+            --text-muted: #aaaaaa;
+            --border-color: #303030;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --google-btn: #4285f4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* HEADER */
+        header {
+            background-color: #121212;
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: 900;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .logo i {
+            color: var(--primary-red);
+            font-size: 28px;
+        }
+
+        /* SEARCH BAR */
+        .search-container {
+            display: flex;
+            width: 45%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 10px 18px;
+            border: 1px solid var(--border-color);
+            background-color: #080808;
+            color: white;
+            border-radius: 0 25px 25px 0;
+            outline: none;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .search-container input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .search-container button {
+            padding: 10px 22px;
+            border: 1px solid var(--border-color);
+            border-right: none;
+            background-color: #222;
+            color: white;
+            border-radius: 25px 0 0 25px;
+            cursor: pointer;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .search-container button:hover {
+            background-color: #333;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-import-header {
+            background: linear-gradient(135deg, #ff0033, #cc0029);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(255, 0, 51, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-import-header:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 0, 51, 0.5);
+        }
+
+        .db-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(46, 204, 113, 0.12);
+            color: var(--success-color);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            cursor: default;
+        }
+
+        .db-badge.disconnected {
+            background: rgba(243, 156, 18, 0.12);
+            color: var(--warning-color);
+            border-color: rgba(243, 156, 18, 0.3);
+        }
+
+        .btn-auth {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--accent-blue);
+            background: transparent;
+            color: var(--accent-blue);
+            cursor: pointer;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .btn-auth:hover {
+            background: rgba(62, 166, 255, 0.15);
+        }
+
+        .user-greeting {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-blue);
+            object-fit: cover;
+        }
+
+        /* APP BODY & SIDEBAR */
+        .app-body {
+            display: flex;
+            flex: 1;
+        }
+
+        .sidebar {
+            width: 230px;
+            background-color: #121212;
+            border-left: 1px solid var(--border-color);
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .sidebar-item:hover {
+            background-color: var(--surface-hover);
+            color: #fff;
+        }
+
+        .sidebar-item.active {
+            background-color: rgba(255, 0, 51, 0.15);
+            color: var(--primary-red);
+            font-weight: 700;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 8px 0;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            padding: 24px 32px;
+            overflow-y: auto;
+        }
+
+        /* SEARCH FILTER TABS */
+        .search-filter-tabs {
+            display: none;
+            gap: 10px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-tab {
+            padding: 8px 18px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-tab:hover {
+            background: var(--surface-hover);
+            color: #fff;
+        }
+
+        .filter-tab.active {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+
+        /* VIDEO PLAYER */
+        .player-section {
+            display: none;
+            margin-bottom: 30px;
+            background: #000;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .player-iframe-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+        }
+
+        .player-iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .player-bar {
+            padding: 16px 20px;
+            background: #181818;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .player-info h3 {
+            font-size: 17px;
+            margin-bottom: 4px;
+        }
+
+        .player-info p {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background: #3a3a3a;
+        }
+
+        .control-btn.btn-fav.active {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            border-color: #ffd700;
+        }
+
+        /* SECTION HEADER */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+            font-size: 22px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* VIDEO / CHANNEL / PLAYLIST GRID */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .video-card {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .video-card:hover {
+            transform: translateY(-4px);
+            border-color: #404040;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .thumbnail-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 */
+            background-color: #252525;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .duration-badge {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .play-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .play-overlay i {
+            font-size: 40px;
+            color: #fff;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.7));
+        }
+
+        .video-card:hover .play-overlay {
+            opacity: 1;
+        }
+
+        .card-fav-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.6);
+            color: #fff;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            z-index: 2;
+        }
+
+        .card-fav-btn:hover {
+            background: rgba(0,0,0,0.9);
+            transform: scale(1.1);
+        }
+
+        .card-fav-btn.active {
+            color: #ffd700;
+        }
+
+        .video-info {
+            padding: 14px 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .video-title {
+            font-weight: 700;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .video-author {
+            color: var(--text-muted);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-ad-free {
+            display: inline-block;
+            background: rgba(255, 0, 51, 0.15);
+            color: var(--primary-red);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            align-self: flex-start;
+        }
+
+        /* CHANNEL CARD */
+        .channel-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            border: 1px solid var(--border-color);
+        }
+
+        .channel-card:hover {
+            transform: translateY(-4px);
+            background: var(--surface-hover);
+        }
+
+        .channel-card img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 12px;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+        }
+
+        .channel-title {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+
+        .channel-subscribers {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin-bottom: 14px;
+        }
+
+        .btn-channel-explore {
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* PLAYLIST CARD */
+        .playlist-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .playlist-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .playlist-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 2;
+        }
+
+        /* EMPTY & LOADING STATES */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            grid-column: 1 / -1;
+        }
+
+        .empty-state i {
+            font-size: 50px;
+            margin-bottom: 16px;
+            color: #444;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: #ddd;
+        }
+
+        /* MODALS (Login & Import) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.85);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 16px;
+            width: 440px;
+            max-width: 90%;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.8);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header i {
+            font-size: 36px;
+            color: var(--primary-red);
+            margin-bottom: 10px;
+        }
+
+        .modal-header h3 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-header p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .btn-google-login {
+            width: 100%;
+            padding: 12px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-google-login:hover {
+            background: #f1f1f1;
+            transform: scale(1.01);
+        }
+
+        .btn-google-login img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .modal-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            margin: 20px 0;
+        }
+
+        .modal-divider::before, .modal-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-divider::before { margin-left: 10px; }
+        .modal-divider::after { margin-right: 10px; }
+
+        .modal-input-group {
+            margin-bottom: 16px;
+        }
+
+        .modal-input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #ccc;
+        }
+
+        .modal-input-group input {
+            width: 100%;
+            padding: 12px 14px;
+            background-color: #111;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .modal-input-group input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .modal-btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 15px;
+            margin-top: 6px;
+            transition: background 0.2s;
+        }
+
+        .modal-btn-submit:hover {
+            background: #e6002e;
+        }
+
+        /* TOAST NOTIFICATION */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: #252525;
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 10px;
+            border-right: 4px solid var(--accent-blue);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast.success { border-right-color: var(--success-color); }
+        .toast.error { border-right-color: var(--danger-color); }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 820px) {
+            .sidebar { display: none; }
+            .search-container { width: 50%; }
+            header { padding: 10px 14px; }
+            .main-content { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي -->
+    <header>
+        <a href="#" class="logo" onclick="switchTab('home')">
+            <i class="fab fa-youtube"></i> GoTube
+        </a>
+        
+        <!-- حقل البحث الذكي والاستيراد الشامل -->
+        <div class="search-container">
+            <input type="text" id="mainSearchInput" placeholder="ابحث عن فيديوهات، قنوات، قوائم تشغيل أو أدخل رابط يوتيوب..." onkeydown="if(event.key==='Enter') executeSearchOrImport()">
+            <button onclick="executeSearchOrImport()"><i class="fas fa-search"></i> بحث</button>
+        </div>
+
+        <div class="header-actions">
+            <!-- زر استيراد مباشر من يوتيوب -->
+            <button class="btn-import-header" onclick="openImportModal()">
+                <i class="fas fa-file-import"></i> استيراد من يوتيوب
+            </button>
+
+            <!-- مؤشر حالة اتصال قاعدة بيانات Firebase -->
+            <div class="db-badge" id="dbStatusBadge">
+                <i class="fas fa-circle-notch fa-spin"></i> Firebase جارِ الاتصال...
+            </div>
+
+            <div id="authSection">
+                <button class="btn-auth" id="loginBtn" onclick="openLoginModal()">
+                    <i class="fas fa-user-circle"></i> تسجيل الدخول
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- جسم التطبيق -->
+    <div class="app-body">
+        <!-- القائمة الجانبية -->
+        <aside class="sidebar">
+            <a href="#" class="sidebar-item active" id="tab-home" onclick="switchTab('home')">
+                <i class="fas fa-home"></i> الرئيسية
+            </a>
+            <a href="#" class="sidebar-item" id="tab-trending" onclick="switchTab('trending')">
+                <i class="fas fa-fire"></i> المحتوى الرائج
+            </a>
+            <a href="#" class="sidebar-item" id="tab-search" onclick="switchTab('search')" style="display: none;">
+                <i class="fas fa-search"></i> نتائج البحث
+            </a>
+            <div class="sidebar-divider"></div>
+            <a href="#" class="sidebar-item" id="tab-favorites" onclick="switchTab('favorites')">
+                <i class="fas fa-star" style="color: #ffd700;"></i> المفضلة (Firebase)
+            </a>
+            <a href="#" class="sidebar-item" id="tab-playlists" onclick="switchTab('playlists')">
+                <i class="fas fa-list" style="color: #9b59b6;"></i> قوائم التشغيل
+            </a>
+            <a href="#" class="sidebar-item" id="tab-history" onclick="switchTab('history')">
+                <i class="fas fa-history" style="color: #3ea6ff;"></i> سجل المشاهدة
+            </a>
+        </aside>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="main-content">
+            <!-- مشغل الفيديو وقوائم التشغيل الذكي بدون إعلانات -->
+            <section class="player-section" id="playerWrapper">
+                <div class="player-iframe-container">
+                    <iframe id="videoIframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+                <div class="player-bar">
+                    <div class="player-info">
+                        <h3 id="currentPlayingTitle">عنوان الفيديو</h3>
+                        <p id="currentPlayingAuthor">القناة / الناشر</p>
+                    </div>
+                    <div class="player-controls">
+                        <button class="control-btn btn-fav" id="playerFavBtn" onclick="togglePlayerFavorite()">
+                            <i class="fas fa-star"></i> <span>إضافة للمفضلة</span>
+                        </button>
+                        <button class="control-btn" id="playerImportPlBtn" onclick="importCurrentPlaylist()" style="display: none; background: #9b59b6; border-color: #8e44ad;">
+                            <i class="fas fa-plus"></i> استيراد القائمة
+                        </button>
+                        <button class="control-btn" onclick="copyVideoLink()">
+                            <i class="fas fa-link"></i> نسخ الرابط
+                        </button>
+                        <button class="control-btn" onclick="closePlayer()" style="color: #ff6b6b;">
+                            <i class="fas fa-times"></i> إغلاق
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- فلاتر نتائج البحث (الكل - فيديوهات - قنوات - قوائم تشغيل) -->
+            <div class="search-filter-tabs" id="searchFilterTabs">
+                <button class="filter-tab active" onclick="applySearchFilter('all')"><i class="fas fa-border-all"></i> الكل</button>
+                <button class="filter-tab" onclick="applySearchFilter('video')"><i class="fas fa-play"></i> الفيديوهات</button>
+                <button class="filter-tab" onclick="applySearchFilter('channel')"><i class="fas fa-user-circle"></i> القنوات</button>
+                <button class="filter-tab" onclick="applySearchFilter('playlist')"><i class="fas fa-list"></i> قوائم التشغيل</button>
+            </div>
+
+            <!-- عنوان القسم النشط -->
+            <div class="section-header">
+                <h2 id="currentSectionTitle"><i class="fas fa-compass"></i> الفيديوهات المقترحة</h2>
+            </div>
+
+            <!-- شبكة عرض النتائج والفيديوهات والقنوات -->
+            <div class="video-grid" id="videoGrid">
+                <!-- يتم توليد البطاقات ديناميكياً هنا -->
+            </div>
+        </main>
+    </div>
+
+    <!-- نافذة تسجيل الدخول مع دعم Google Auth و Firebase -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeLoginModal()"><i class="fas fa-times"></i></button>
+            <div class="modal-header">
+                <i class="fab fa-google" style="color: #4285f4;"></i>
+                <h3>تسجيل الدخول إلى GoTube</h3>
+                <p>اربط حسابك بحساب Google أو Firebase لحفظ قوائم التشغيل والمفضلة وسجل المشاهدة</p>
+            </div>
+
+            <!-- زر تسجيل الدخول بحساب Google / YouTube المباشر -->
+            <button class="btn-google-login" onclick="handleGoogleLogin()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                <span>المتابعة باستخدام حساب Google / YouTube</span>
+            </button>
+
+            <div class="modal-divider">أو تسجيل الدخول باسم المستخدم</div>
+
+            <div class="modal-input-group">
+                <label>اسم المستخدم</label>
+                <input type="text" id="modalUsername" placeholder="مثال: Ahmed">
+            </div>
+            <div class="modal-input-group">
+                <label>كلمة المرور</label>
+                <input type="password" id="modalPassword" placeholder="••••••••">
+            </div>
+            <button class="modal-btn-submit" onclick="submitCustomLogin()">دخول / إنشاء حساب في Firebase</button>
+        </div>
+    </div>
+
+    <!-- نافذة الاستيراد المباشر من يوتيوب -->
+    <div class="modal" id="importModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeImportModal()"><i class="fas fa-times"></i></button>
+            <div class="modal-header">
+                <i class="fas fa-cloud-download-alt"></i>
+                <h3>استيراد محتوى من YouTube إلى GoTube</h3>
+                <p>الصق رابط أي فيديو، قائمة تشغيل، أو قناة يوتيوب للاستيراد والتشغيل بدون فواصل إعلانية</p>
+            </div>
+            <div class="modal-input-group">
+                <label>رابط يوتيوب أو معرف الفيديو / القائمة</label>
+                <input type="text" id="importUrlInput" placeholder="https://www.youtube.com/watch?v=... أو رابط قائمة تشغيل">
+            </div>
+            <button class="modal-btn-submit" onclick="submitImportFromModal()">استيراد وتشغيل الآن</button>
+        </div>
+    </div>
+
+    <!-- التنبيهات المنبثقة -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- كود التحكم بالواجهة -->
+    <script>
+        // الفيديوهات الافتراضية
+        const sampleVideos = [
+            { id: "dQw4w9WgXcQ", title: "فيديو رائع ومميز للاستماع والمشاهدة على جوتيوب بدون تقطيع", author: "قناة الإبداع" },
+            { id: "9bZkp7q19f0", title: "تعلم تطوير الويب الحديث والبرمجيات خطوة بخطوة باللغة العربية", author: "أكاديمية البرمجة" },
+            { id: "kJQP7kiw5Fk", title: "موسيقى هادئة ومركزة للدراسة والعمل بدون فواصل إعلانية", author: "جوتيوب ريلاكس" },
+            { id: "tgbNymZ7vqY", title: "رحلة وثائقية ساحرة عبر أجمل المحميات الطبيعية في العالم", author: "عالم المعرفة" },
+            { id: "fJ9rUzIMcZQ", title: "ملخص ممتع لأهم اكتشافات الفضاء واستكشاف الكون", author: "علوم الفضاء" },
+            { id: "ZbZSe6N_BXs", title: "بودكاست شيق عن الذكاء الاصطناعي وتكنولوجيا المستقبل", author: "تكنولوجيا اليوم" }
+        ];
+
+        let currentActiveTab = 'home';
+        let currentPlayingItem = null;
+        let userFavoritesMap = {};
+        let lastSearchResults = { videos: [], channels: [], playlists: [] };
+        let activeFilter = 'all';
+        let activeSearchQuery = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initApp();
+        });
+
+        function initApp() {
+            // مراقبة اتصال Firebase
+            window.GoTubeDB.onDatabaseStatusChange((status) => {
+                const badge = document.getElementById('dbStatusBadge');
+                if (status.connected) {
+                    badge.className = 'db-badge';
+                    badge.innerHTML = '<i class="fas fa-check-circle"></i> متصل بـ Firebase بنجاح';
+                } else {
+                    badge.className = 'db-badge disconnected';
+                    badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> اتصال محلي (Firebase جاهز)';
+                }
+            });
+
+            refreshUserAuthDisplay();
+            renderHomeVideos();
+        }
+
+        // تحديث معلومات المستخدم في الشريط العلوي
+        async function refreshUserAuthDisplay() {
+            const session = window.GoTubeDB.getCurrentSession();
+            const authSection = document.getElementById('authSection');
+
+            if (session) {
+                const avatar = session.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${session.username}`;
+                authSection.innerHTML = `
+                    <div class="user-greeting">
+                        <img src="${avatar}" class="user-avatar" alt="Avatar">
+                        <span>${session.username}</span>
+                        <button class="btn-auth" onclick="handleLogout()" style="padding: 4px 10px; font-size: 12px; margin-right: 4px;">خروج</button>
+                    </div>
+                `;
+                loadUserFavoritesState();
+            } else {
+                authSection.innerHTML = `
+                    <button class="btn-auth" onclick="openLoginModal()">
+                        <i class="fas fa-user-circle"></i> تسجيل الدخول
+                    </button>
+                `;
+                userFavoritesMap = {};
+            }
+        }
+
+        async function loadUserFavoritesState() {
+            try {
+                const data = await window.GoTubeDB.getUserData();
+                userFavoritesMap = {};
+                (data.favorites || []).forEach(f => {
+                    userFavoritesMap[f.id] = true;
+                });
+                updateCardFavButtons();
+                updatePlayerFavButton();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // فحص الروابط والاستيراد الذكي
+        function parseYouTubeUrl(url) {
+            if (!url) return null;
+            url = url.trim();
+
+            // فحص قائمة تشغيل
+            const plMatch = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+            if (plMatch) {
+                return { type: 'playlist', id: plMatch[1] };
+            }
+
+            // فحص معرف فيديو 11 حرف
+            if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
+                return { type: 'video', id: url };
+            }
+
+            // فحص فيديو يوتيوب
+            const vMatch = url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/);
+            if (vMatch && vMatch[2].length === 11) {
+                return { type: 'video', id: vMatch[2] };
+            }
+
+            // فحص قناة
+            const chMatch = url.match(/youtube\.com\/(@[a-zA-Z0-9_.-]+|channel\/[a-zA-Z0-9_-]+)/);
+            if (chMatch) {
+                return { type: 'channel', query: chMatch[1] };
+            }
+
+            return null;
+        }
+
+        // تنفيذ البحث أو الاستيراد من الحقل الرئيسي
+        function executeSearchOrImport() {
+            const query = document.getElementById('mainSearchInput').value.trim();
+            if (!query) return;
+
+            const parsed = parseYouTubeUrl(query);
+            if (parsed) {
+                if (parsed.type === 'video') {
+                    playVideo({
+                        id: parsed.id,
+                        title: "فيديو مستورد إلى جوتيوب (" + parsed.id + ")",
+                        author: "يوتيوب بدون إعلانات",
+                        thumbnail: `https://img.youtube.com/vi/${parsed.id}/mqdefault.jpg`
+                    });
+                    showToast("تم استيراد الفيديو وتشغيله بدون إعلانات!", "success");
+                    return;
+                } else if (parsed.type === 'playlist') {
+                    playPlaylist({
+                        id: parsed.id,
+                        title: "قائمة تشغيل مستوردة من يوتيوب",
+                        author: "قائمة تشغيل جوتيوب"
+                    });
+                    showToast("تم استيراد قائمة التشغيل بنجاح!", "success");
+                    return;
+                } else if (parsed.type === 'channel') {
+                    performSearch(parsed.query);
+                    return;
+                }
+            }
+
+            // بحث بالكلمات
+            performSearch(query);
+        }
+
+        // استدعاء واجهة البحث المباشرة
+        async function performSearch(query, filter = 'all') {
+            activeSearchQuery = query;
+            activeFilter = filter;
+            switchTab('search');
+
+            const grid = document.getElementById('videoGrid');
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin" style="color: var(--accent-blue);"></i>
+                    <h3>جارِ البحث في يوتيوب عن "${query}"...</h3>
+                    <p>يتم جلب الفيديوهات والقنوات وقوائم التشغيل لحظياً</p>
+                </div>
+            `;
+
+            document.getElementById('currentSectionTitle').innerHTML = `<i class="fas fa-search"></i> نتائج البحث عن: "${query}"`;
+            document.getElementById('searchFilterTabs').style.display = 'flex';
+
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=${filter}`);
+                const data = await response.json();
+                lastSearchResults = data;
+                renderSearchResults(data, filter);
+            } catch (err) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i>
+                        <h3>تعذر جلب نتائج البحث من يوتيوب</h3>
+                        <p>${err.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function applySearchFilter(filter) {
+            activeFilter = filter;
+            document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            if (activeSearchQuery) {
+                performSearch(activeSearchQuery, filter);
+            }
+        }
+
+        function renderSearchResults(data, filter) {
+            const grid = document.getElementById('videoGrid');
+            grid.innerHTML = '';
+
+            const videos = data.videos || [];
+            const channels = data.channels || [];
+            const playlists = data.playlists || [];
+
+            let totalCount = 0;
+
+            // 1. القنوات (إذا كان الكل أو القنوات)
+            if ((filter === 'all' || filter === 'channel') && channels.length > 0) {
+                channels.forEach(ch => {
+                    totalCount++;
+                    const thumb = ch.thumbnail ? (ch.thumbnail.startsWith('//') ? 'https:' + ch.thumbnail : ch.thumbnail) : 'https://api.dicebear.com/7.x/bottts/svg?seed=' + ch.title;
+                    grid.innerHTML += `
+                        <div class="channel-card" onclick="performSearch('${ch.title}')">
+                            <img src="${thumb}" alt="${ch.title}">
+                            <div class="channel-title">${ch.title}</div>
+                            <div class="channel-subscribers">${ch.subscriberCount || 'قناة يوتيوب'}</div>
+                            <div class="btn-channel-explore"><i class="fas fa-tv"></i> استعراض القناة</div>
+                        </div>
+                    `;
+                });
+            }
+
+            // 2. قوائم التشغيل (إذا كان الكل أو قوائم التشغيل)
+            if ((filter === 'all' || filter === 'playlist') && playlists.length > 0) {
+                playlists.forEach(pl => {
+                    totalCount++;
+                    const thumb = pl.thumbnail || `https://i.ytimg.com/vi/${pl.id}/hqdefault.jpg`;
+                    const encodedPl = encodeURIComponent(JSON.stringify(pl));
+                    grid.innerHTML += `
+                        <div class="playlist-card" onclick='playPlaylist(${JSON.stringify(pl)})'>
+                            <div class="thumbnail-container" style="background-image: url('${thumb}')">
+                                <span class="playlist-badge"><i class="fas fa-list"></i> ${pl.videoCount || 'قائمة'}</span>
+                                <div class="play-overlay"><i class="fas fa-play-circle"></i></div>
+                            </div>
+                            <div class="video-info">
+                                <div class="video-title">${pl.title}</div>
+                                <div class="video-author"><i class="fas fa-folder"></i> ${pl.author || 'قائمة يوتيوب'}</div>
+                                <span class="badge-ad-free" style="background: rgba(155, 89, 182, 0.2); color: #9b59b6;"><i class="fas fa-layer-group"></i> تشغيل القائمة كاملة</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // 3. الفيديوهات (إذا كان الكل أو الفيديوهات)
+            if (filter === 'all' || filter === 'video') {
+                videos.forEach(v => {
+                    totalCount++;
+                    const isFav = !!userFavoritesMap[v.id];
+                    const encodedVideo = encodeURIComponent(JSON.stringify(v));
+                    const thumb = v.thumbnail || `https://img.youtube.com/vi/${v.id}/mqdefault.jpg`;
+
+                    grid.innerHTML += `
+                        <div class="video-card" onclick='playVideo(${JSON.stringify(v)})'>
+                            <div class="thumbnail-container" style="background-image: url('${thumb}')">
+                                <button class="card-fav-btn ${isFav ? 'active' : ''}" data-id="${v.id}" onclick="toggleCardFavorite(event, '${encodedVideo}')">
+                                    <i class="${isFav ? 'fas' : 'far'} fa-star"></i>
+                                </button>
+                                ${v.duration ? `<span class="duration-badge">${v.duration}</span>` : ''}
+                                <div class="play-overlay">
+                                    <i class="fas fa-play-circle"></i>
+                                </div>
+                            </div>
+                            <div class="video-info">
+                                <div>
+                                    <div class="video-title">${v.title}</div>
+                                    <div class="video-author"><i class="fas fa-check-circle" style="color: #aaa; font-size: 11px;"></i> ${v.author || 'قناة يوتيوب'} ${v.views ? `• ${v.views}` : ''}</div>
+                                </div>
+                                <span class="badge-ad-free"><i class="fas fa-shield-alt"></i> بدون إعلانات</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            if (totalCount === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="far fa-frown"></i>
+                        <h3>لم نتمكن من العثور على نتائج</h3>
+                        <p>جرّب كلمات بحث أخرى أو الصق رابط الفيديو مباشرة في حقل الاستيراد</p>
+                    </div>
+                `;
+            }
+        }
+
+        // تشغيل فيديو
+        function playVideo(video) {
+            currentPlayingItem = { type: 'video', ...video };
+            const wrapper = document.getElementById('playerWrapper');
+            const iframe = document.getElementById('videoIframe');
+
+            iframe.src = `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0&modestbranding=1`;
+            
+            document.getElementById('currentPlayingTitle').innerText = video.title || 'فيديو جوتيوب';
+            document.getElementById('currentPlayingAuthor').innerText = video.author || 'قناة غير محددة';
+            document.getElementById('playerFavBtn').style.display = 'flex';
+            document.getElementById('playerImportPlBtn').style.display = 'none';
+
+            wrapper.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            updatePlayerFavButton();
+            window.GoTubeDB.addWatchHistory(video);
+        }
+
+        // تشغيل قائمة تشغيل
+        function playPlaylist(playlist) {
+            currentPlayingItem = { type: 'playlist', ...playlist };
+            const wrapper = document.getElementById('playerWrapper');
+            const iframe = document.getElementById('videoIframe');
+
+            iframe.src = `https://www.youtube-nocookie.com/embed/videoseries?list=${playlist.id}&autoplay=1&rel=0`;
+            
+            document.getElementById('currentPlayingTitle').innerText = playlist.title || 'قائمة تشغيل جوتيوب';
+            document.getElementById('currentPlayingAuthor').innerText = playlist.author || 'يوتيوب';
+            document.getElementById('playerFavBtn').style.display = 'none';
+            document.getElementById('playerImportPlBtn').style.display = 'flex';
+
+            wrapper.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // استيراد قائمة التشغيل الحالية إلى حساب المستخدم
+        async function importCurrentPlaylist() {
+            if (!currentPlayingItem || currentPlayingItem.type !== 'playlist') return;
+            const session = window.GoTubeDB.getCurrentSession();
+            if (!session) {
+                showToast("يرجى تسجيل الدخول أولاً لحفظ قائمة التشغيل!", "error");
+                openLoginModal();
+                return;
+            }
+
+            try {
+                const res = await window.GoTubeDB.savePlaylist(currentPlayingItem);
+                showToast(res.message, "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        function closePlayer() {
+            const wrapper = document.getElementById('playerWrapper');
+            const iframe = document.getElementById('videoIframe');
+            iframe.src = '';
+            wrapper.style.display = 'none';
+            currentPlayingItem = null;
+        }
+
+        function copyVideoLink() {
+            if (!currentPlayingItem) return;
+            const url = currentPlayingItem.type === 'playlist' 
+                ? `https://www.youtube.com/playlist?list=${currentPlayingItem.id}` 
+                : `https://www.youtube.com/watch?v=${currentPlayingItem.id}`;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast("تم نسخ الرابط بنجاح!", "success");
+            });
+        }
+
+        // إدارة المفضلة
+        async function togglePlayerFavorite() {
+            if (!currentPlayingItem || currentPlayingItem.type !== 'video') return;
+            const session = window.GoTubeDB.getCurrentSession();
+            if (!session) {
+                showToast("يرجى تسجيل الدخول أولاً لإضافة الفيديو للمفضلة!", "error");
+                openLoginModal();
+                return;
+            }
+
+            try {
+                const res = await window.GoTubeDB.toggleFavorite(currentPlayingItem);
+                userFavoritesMap[currentPlayingItem.id] = res.isFavorite;
+                updatePlayerFavButton();
+                updateCardFavButtons();
+                showToast(res.message, "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function toggleCardFavorite(event, videoJsonStr) {
+            event.stopPropagation();
+            const session = window.GoTubeDB.getCurrentSession();
+            if (!session) {
+                showToast("يرجى تسجيل الدخول أولاً لإضافة الفيديو للمفضلة!", "error");
+                openLoginModal();
+                return;
+            }
+
+            try {
+                const video = JSON.parse(decodeURIComponent(videoJsonStr));
+                const res = await window.GoTubeDB.toggleFavorite(video);
+                userFavoritesMap[video.id] = res.isFavorite;
+                updateCardFavButtons();
+                updatePlayerFavButton();
+                showToast(res.message, "success");
+
+                if (currentActiveTab === 'favorites') {
+                    renderFavoritesTab();
+                }
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        function updatePlayerFavButton() {
+            const btn = document.getElementById('playerFavBtn');
+            if (!btn || !currentPlayingItem || currentPlayingItem.type !== 'video') return;
+
+            const isFav = !!userFavoritesMap[currentPlayingItem.id];
+            if (isFav) {
+                btn.className = 'control-btn btn-fav active';
+                btn.innerHTML = '<i class="fas fa-star"></i> <span>في المفضلة</span>';
+            } else {
+                btn.className = 'control-btn btn-fav';
+                btn.innerHTML = '<i class="far fa-star"></i> <span>إضافة للمفضلة</span>';
+            }
+        }
+
+        function updateCardFavButtons() {
+            document.querySelectorAll('.card-fav-btn').forEach(btn => {
+                const vidId = btn.getAttribute('data-id');
+                if (userFavoritesMap[vidId]) {
+                    btn.classList.add('active');
+                    btn.innerHTML = '<i class="fas fa-star"></i>';
+                } else {
+                    btn.classList.remove('active');
+                    btn.innerHTML = '<i class="far fa-star"></i>';
+                }
+            });
+        }
+
+        // التبديل بين التبويبات
+        async function switchTab(tab) {
+            currentActiveTab = tab;
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById(`tab-${tab}`);
+            if (activeNav) activeNav.classList.add('active');
+
+            const filterTabs = document.getElementById('searchFilterTabs');
+            if (tab === 'search') {
+                filterTabs.style.display = 'flex';
+                document.getElementById('tab-search').style.display = 'flex';
+            } else {
+                filterTabs.style.display = 'none';
+            }
+
+            if (tab === 'home') {
+                document.getElementById('currentSectionTitle').innerHTML = '<i class="fas fa-compass"></i> الفيديوهات المقترحة';
+                renderHomeVideos();
+            } else if (tab === 'trending') {
+                document.getElementById('currentSectionTitle').innerHTML = '<i class="fas fa-fire" style="color: #ff4500;"></i> المحتوى الرائج';
+                renderTrendingVideos();
+            } else if (tab === 'favorites') {
+                document.getElementById('currentSectionTitle').innerHTML = '<i class="fas fa-star" style="color: #ffd700;"></i> فيديوهاتك المفضلة (Firebase)';
+                renderFavoritesTab();
+            } else if (tab === 'playlists') {
+                document.getElementById('currentSectionTitle').innerHTML = '<i class="fas fa-list" style="color: #9b59b6;"></i> قوائم التشغيل المحفوظة';
+                renderPlaylistsTab();
+            } else if (tab === 'history') {
+                document.getElementById('currentSectionTitle').innerHTML = '<i class="fas fa-history" style="color: #3ea6ff;"></i> سجل المشاهدة (Firebase)';
+                renderHistoryTab();
+            }
+        }
+
+        function renderHomeVideos() {
+            renderVideoGrid(sampleVideos);
+        }
+
+        function renderTrendingVideos() {
+            const trending = [...sampleVideos].reverse();
+            renderVideoGrid(trending);
+        }
+
+        async function renderFavoritesTab() {
+            const session = window.GoTubeDB.getCurrentSession();
+            const grid = document.getElementById('videoGrid');
+
+            if (!session) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-lock"></i>
+                        <h3>يرجى تسجيل الدخول للوصول إلى مفضلتك</h3>
+                        <p>تسجيل الدخول يربط حسابك بقاعدة بيانات Firebase لتتمكن من حفظ فيديوهاتك</p>
+                        <button class="btn-auth" onclick="openLoginModal()" style="margin: 16px auto;">تسجيل الدخول الآن</button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>جارِ جلب المفضلة من Firebase...</h3></div>`;
+            const data = await window.GoTubeDB.getUserData();
+
+            if (!data.favorites || data.favorites.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="far fa-star"></i>
+                        <h3>لا توجد فيديوهات في المفضلة بعد</h3>
+                        <p>اضغط على رمز النجمة ⭐ في أي فيديو لإضافته إلى حسابك في Firebase</p>
+                    </div>
+                `;
+                return;
+            }
+
+            renderVideoGrid(data.favorites);
+        }
+
+        async function renderPlaylistsTab() {
+            const session = window.GoTubeDB.getCurrentSession();
+            const grid = document.getElementById('videoGrid');
+
+            if (!session) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-lock"></i>
+                        <h3>يرجى تسجيل الدخول للوصول إلى قوائم التشغيل</h3>
+                        <p>احفظ واستورد قوائم تشغيل YouTube الكاملة لتشغيلها بدون فواصل</p>
+                        <button class="btn-auth" onclick="openLoginModal()" style="margin: 16px auto;">تسجيل الدخول الآن</button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>جارِ جلب قوائم التشغيل...</h3></div>`;
+            const data = await window.GoTubeDB.getUserData();
+
+            if (!data.playlists || data.playlists.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-list"></i>
+                        <h3>لا توجد قوائم تشغيل محفوظة</h3>
+                        <p>يمكنك استيراد أي قائمة تشغيل من يوتيوب عبر زر "استيراد من يوتيوب"</p>
+                        <button class="btn-import-header" onclick="openImportModal()" style="margin: 16px auto;">استيراد قائمة تشغيل الآن</button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = '';
+            data.playlists.forEach(pl => {
+                const thumb = pl.thumbnail || `https://i.ytimg.com/vi/${pl.id}/hqdefault.jpg`;
+                grid.innerHTML += `
+                    <div class="playlist-card" onclick='playPlaylist(${JSON.stringify(pl)})'>
+                        <div class="thumbnail-container" style="background-image: url('${thumb}')">
+                            <span class="playlist-badge"><i class="fas fa-list"></i> ${pl.videoCount || 'قائمة'}</span>
+                            <div class="play-overlay"><i class="fas fa-play-circle"></i></div>
+                        </div>
+                        <div class="video-info">
+                            <div class="video-title">${pl.title}</div>
+                            <div class="video-author"><i class="fas fa-folder"></i> ${pl.author || 'قائمة يوتيوب'}</div>
+                            <span class="badge-ad-free" style="background: rgba(155, 89, 182, 0.2); color: #9b59b6;"><i class="fas fa-play"></i> تشغيل القائمة</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        async function renderHistoryTab() {
+            const session = window.GoTubeDB.getCurrentSession();
+            const grid = document.getElementById('videoGrid');
+
+            if (!session) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-lock"></i>
+                        <h3>يرجى تسجيل الدخول للوصول إلى سجل المشاهدة</h3>
+                        <p>يتم حفظ الفيديوهات التي تشاهدها تلقائياً داخل Firebase</p>
+                        <button class="btn-auth" onclick="openLoginModal()" style="margin: 16px auto;">تسجيل الدخول الآن</button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>جارِ جلب السجل من Firebase...</h3></div>`;
+            const data = await window.GoTubeDB.getUserData();
+
+            if (!data.history || data.history.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-history"></i>
+                        <h3>سجل المشاهدة فارغ</h3>
+                        <p>الفيديوهات التي تشاهدها ستظهر هنا وتُحفظ في حسابك</p>
+                    </div>
+                `;
+                return;
+            }
+
+            renderVideoGrid(data.history);
+        }
+
+        function renderVideoGrid(videos) {
+            const grid = document.getElementById('videoGrid');
+            grid.innerHTML = '';
+
+            videos.forEach(v => {
+                const isFav = !!userFavoritesMap[v.id];
+                const encodedVideo = encodeURIComponent(JSON.stringify(v));
+                const thumb = v.thumbnail || `https://img.youtube.com/vi/${v.id}/mqdefault.jpg`;
+
+                grid.innerHTML += `
+                    <div class="video-card" onclick='playVideo(${JSON.stringify(v)})'>
+                        <div class="thumbnail-container" style="background-image: url('${thumb}')">
+                            <button class="card-fav-btn ${isFav ? 'active' : ''}" data-id="${v.id}" onclick="toggleCardFavorite(event, '${encodedVideo}')">
+                                <i class="${isFav ? 'fas' : 'far'} fa-star"></i>
+                            </button>
+                            ${v.duration ? `<span class="duration-badge">${v.duration}</span>` : ''}
+                            <div class="play-overlay">
+                                <i class="fas fa-play-circle"></i>
+                            </div>
+                        </div>
+                        <div class="video-info">
+                            <div>
+                                <div class="video-title">${v.title}</div>
+                                <div class="video-author"><i class="fas fa-check-circle" style="color: #aaa; font-size: 11px;"></i> ${v.author || 'قناة غير محددة'}</div>
+                            </div>
+                            <span class="badge-ad-free"><i class="fas fa-shield-alt"></i> بدون إعلانات</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // نافذة تسجيل الدخول
+        function openLoginModal() {
+            document.getElementById('loginModal').style.display = 'flex';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginModal').style.display = 'none';
+        }
+
+        async function handleGoogleLogin() {
+            try {
+                showToast("جارِ الاتصال بحساب Google / YouTube...", "info");
+                const res = await window.GoTubeDB.authWithGoogle();
+                closeLoginModal();
+                showToast(res.message, "success");
+                refreshUserAuthDisplay();
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        async function submitCustomLogin() {
+            const user = document.getElementById('modalUsername').value;
+            const pass = document.getElementById('modalPassword').value;
+
+            if (!user.trim() || !pass.trim()) {
+                showToast("يرجى إدخال اسم المستخدم وكلمة المرور!", "error");
+                return;
+            }
+
+            try {
+                const res = await window.GoTubeDB.authUser(user, pass);
+                closeLoginModal();
+                showToast(res.message, "success");
+                refreshUserAuthDisplay();
+                document.getElementById('modalUsername').value = '';
+                document.getElementById('modalPassword').value = '';
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        }
+
+        function handleLogout() {
+            window.GoTubeDB.logoutUser();
+            refreshUserAuthDisplay();
+            showToast("تم تسجيل الخروج بنجاح", "success");
+            if (currentActiveTab === 'favorites' || currentActiveTab === 'history' || currentActiveTab === 'playlists') {
+                switchTab('home');
+            }
+        }
+
+        // نافذة الاستيراد المباشر
+        function openImportModal() {
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+        }
+
+        function submitImportFromModal() {
+            const input = document.getElementById('importUrlInput').value.trim();
+            if (!input) {
+                showToast("يرجى إدخال الرابط للاستيراد!", "error");
+                return;
+            }
+
+            const parsed = parseYouTubeUrl(input);
+            if (!parsed) {
+                showToast("الرابط المدخل غير صالح، يرجى إدخال رابط فيديو أو قائمة تشغيل يوتيوب صحيحة!", "error");
+                return;
+            }
+
+            closeImportModal();
+            document.getElementById('importUrlInput').value = '';
+
+            if (parsed.type === 'video') {
+                playVideo({
+                    id: parsed.id,
+                    title: "فيديو مستورد (" + parsed.id + ")",
+                    author: "يوتيوب بدون إعلانات",
+                    thumbnail: `https://img.youtube.com/vi/${parsed.id}/mqdefault.jpg`
+                });
+                showToast("تم استيراد الفيديو بنجاح!", "success");
+            } else if (parsed.type === 'playlist') {
+                playPlaylist({
+                    id: parsed.id,
+                    title: "قائمة تشغيل مستوردة من يوتيوب",
+                    author: "قائمة تشغيل"
+                });
+                showToast("تم استيراد قائمة التشغيل بنجاح!", "success");
+            } else if (parsed.type === 'channel') {
+                performSearch(parsed.query);
+            }
+        }
+
+        // نظام الرسائل المنبثقة Toasts
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                toast.style.transition = 'all 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
